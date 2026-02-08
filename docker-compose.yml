@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:alpine
+    container_name: flight_db
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=userifs
+      - POSTGRES_PASSWORD=senha-ifs
+      - POSTGRES_DB=demo-flight_ts
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

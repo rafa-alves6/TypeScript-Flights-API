@@ -8,6 +8,9 @@
     "start": "node dist/server.js",
     "dev": "nodemon src/server.ts",
     "seed": "ts-node prisma/seed.ts",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "setup": "npx prisma migrate dev --name init && npx prisma db seed",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
