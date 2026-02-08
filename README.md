@@ -1,78 +1,85 @@
-# Guia de Execução da Flight API
+# Flight API - Backend TypeScript
 
-Este guia detalha o processo completo para configurar o ambiente, instalar dependências, corrigir arquivos faltantes e executar a API de voos.
+Este projeto consiste em uma API RESTful para gerenciamento de voos, passageiros e cartões de embarque, desenvolvida com Node.js, TypeScript, Express, Prisma ORM e PostgreSQL, com containeriziação via Docker.
 
 ## Pré-requisitos
 
-Antes de iniciar, certifique-se de ter instalado:
-- Node.js (versão 18 ou superior)
-- Docker Desktop (deve estar em execução)
-- Git (opcional)
+Certifique-se de ter instalado em sua máquina:
+- **Node.js** (versão 18 ou superior)
+- **Docker Desktop** (deve estar em execução)
+- **Git**
 
-## Passo a Passo para Instalação
+## Guia de Instalação e Configuração
+
+Siga os passos abaixo para configurar o ambiente do zero.
 
 ### 1. Instalar Dependências
 
-Abra o terminal na pasta raiz do projeto e execute o comando para baixar as bibliotecas necessárias:
+No terminal, execute:
 ```bash
 npm install
 ```
+### 2. Inicializar o Banco de Dados
 
-### 2. Inicializar o Banco de Dados (Docker)
-
-Utilize o script configurado para subir o container do PostgreSQL via Docker:
+Suba o container do PostgreSQL usando o Docker:
 ```bash
 npm run docker:up
 ```
-Aguarde até que o container esteja rodando.
+### 3. Configurar o Banco (Migrate e Seed)
 
-### 3. Configurar o Banco e Inserir Dados (Setup)
-
-Execute o script de setup para criar as tabelas no banco de dados e popular com dados iniciais (seed):
+Execute o script de setup para criar as tabelas e popular o banco com dados iniciais:
 ```bash
 npm run setup
 ```
-Se o comando for bem-sucedido, você verá a mensagem "Seed completo" no final.
+Você deverá ver a mensagem "Seed completo" ao final.
 
 ## Executando a Aplicação
 
-Para iniciar o servidor em modo de desenvolvimento, execute:
+Para iniciar o servidor em modo de desenvolvimento:
 ```bash
 npm run dev
 ```
-Se tudo estiver correto, o terminal exibirá: API rodando na porta 3000.
+A API estará rodando em: `http://localhost:3000`
 
-## Testando a API (Exemplos com cURL)
+---
 
-Abaixo estão exemplos de como testar as rotas utilizando o terminal.
+## Documentação da API
 
-### 1. Listar Voos (Rota Pública)
-```bash
-curl -X GET http://localhost:3000/api/flights
-```
-### 2. Login (Autenticação)
+### 1. Autenticação
 
-Use o usuário padrão criado pelo seed (admin) para obter um token de acesso.
-```bash
-curl -X POST http://localhost:3000/api/login \
-  -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "123456"}'
-```
-Resposta esperada: Um JSON contendo o campo "token". Copie o valor do token para usar nas rotas privadas.
+**POST** `/api/login`
+Gera o Token JWT necessário para as rotas privadas.
+- **Body:** `{ "username": "admin", "password": "123456" }`
+- **Retorno:** `{ "token": "..." }`
 
-### 3. Criar Usuário (Rota Privada - Requer Token)
+### 2. Rotas Públicas (Consultas)
 
-Substitua SEU_TOKEN_AQUI pelo token obtido no passo anterior.
-```bash
-curl -X POST http://localhost:3000/api/users \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer SEU_TOKEN_AQUI" \
-  -d '{"username": "novo_operador", "password": "123", "role": "regular"}'
-```
-### 4. Deletar Usuário (Rota Privada - Requer Token)
+**GET** `/api/aircrafts`
+- Lista todas as aeronaves.
 
-Exemplo para deletar o usuário com ID 2:
-```bash
-curl -X DELETE http://localhost:3000/api/users/2 \
-  -H "Authorization: Bearer SEU_TOKEN_AQUI"
-```
+**GET** `/api/flights`
+- Lista todos os voos.
+
+**GET** `/api/passengers`
+- Lista todos os passageiros.
+
+### 3. Rota de Teste de Carga (Join)
+
+**GET** `/api/boarding-details`
+- Retorna um JSON contendo dados unificados de Cartão de Embarque, Passageiro, Voo e Aeronave (realiza um `JOIN` entre 4 tabelas).
+
+### 4. Gestão de Usuários (Rotas Privadas)
+
+Requer Header: `Authorization: Bearer <SEU_TOKEN>`
+
+**POST** `/api/users` (Apenas Admin)
+- Cria um novo operador.
+- **Body:** `{ "username": "novo", "password": "123", "role": "regular" }`
+
+**PUT** `/api/users/:id` (Admin ou o próprio usuário)
+- Atualiza dados do usuário.
+
+**DELETE** `/api/users/:id` (Apenas Admin)
+- Remove um usuário.
+
+---
