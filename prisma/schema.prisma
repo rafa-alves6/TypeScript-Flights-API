@@ -1,15 +1,68 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  regular
+}
+
+model SysUser {
+  id       Int      @id @default(autoincrement())
+  username String   @unique
+  password String
+  role     UserRole @default(regular)
+
+  @@map("sys_user")
+}
+
+model Aircraft {
+  aircraftId   Int      @id @default(autoincrement()) @map("aircraft_id")
+  model        String
+  manufacturer String
+  capacity     Int
+  flights      Flight[]
+
+  @@map("aircraft")
+}
+
+model Passenger {
+  passengerId    Int            @id @default(autoincrement()) @map("passenger_id")
+  firstName      String         @map("first_name")
+  lastName       String         @map("last_name")
+  birthDate      DateTime       @map("birth_date") @db.Date
+  passportNumber String         @map("passport_number")
+  boardingPasses BoardingPass[]
+
+  @@map("passenger")
+}
+
+model Flight {
+  flightId         Int            @id @default(autoincrement()) @map("flight_id")
+  flightNumber     String         @map("flight_number")
+  departureAirport String         @map("departure_airport")
+  arrivalAirport   String         @map("arrival_airport")
+  departureTime    DateTime       @map("departure_time")
+  arrivalTime      DateTime       @map("arrival_time")
+  aircraftId       Int            @map("aircraft_id")
+  aircraft         Aircraft       @relation(fields: [aircraftId], references: [aircraftId])
+  boardingPasses   BoardingPass[]
+
+  @@map("flight")
+}
+
+model BoardingPass {
+  boardingPassId Int       @id @default(autoincrement()) @map("boarding_pass_id")
+  seatNumber     String    @map("seat_number")
+  issueTime      DateTime  @default(now()) @map("issue_time")
+  passengerId    Int       @map("passenger_id")
+  flightId       Int       @map("flight_id")
+  passenger      Passenger @relation(fields: [passengerId], references: [passengerId])
+  flight         Flight    @relation(fields: [flightId], references: [flightId])
+
+  @@map("boarding_pass")
 }
