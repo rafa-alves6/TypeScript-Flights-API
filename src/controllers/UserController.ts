@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
 import { UserRepository } from '../repositories/UserRepository';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma'; 
 import bcrypt from 'bcryptjs';
 
-const prisma = new PrismaClient();
 const userRepo = new UserRepository(prisma);
 
 export class UserController {
@@ -24,7 +23,7 @@ export class UserController {
   }
 
   static async update(req: Request, res: Response): Promise<void> {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const { username, password } = req.body;
     
     const requestUser = (req as any).user;
@@ -49,7 +48,7 @@ export class UserController {
   }
 
   static async delete(req: Request, res: Response): Promise<void> {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     try {
       await userRepo.delete(id);
       res.status(204).send();

@@ -40,7 +40,7 @@ async function main() {
   const flights = await prisma.flight.findMany();
 
   // 4. criar 10000 passageiros e passes 
-  console.log('Seeding passengers and boarding passes...');
+  console.log('Criando passageiros e passes...');
   
   for (let i = 0; i < 100; i++) { 
     const passengersChunk = [];
@@ -67,7 +67,7 @@ async function main() {
     }
   }
 
-  console.log('Seeding finished.');
+  console.log('Seed completo.');
 }
 
 main()
