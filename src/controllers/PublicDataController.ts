@@ -1,38 +1,64 @@
 import { Request, Response } from 'express';
 import prisma from '../prisma';
 
-
 export class PublicDataController {
   static async getAllAircrafts(req: Request, res: Response) {
-    const data = await prisma.aircraft.findMany();
-    res.json(data);
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await prisma.$transaction([
+      prisma.aircraft.findMany({ skip, take: limit, orderBy: { aircraftId: 'asc' } }),
+      prisma.aircraft.count()
+    ]);
+
+    res.json({ data, total, page, limit });
   }
 
   static async getAllFlights(req: Request, res: Response) {
-    const data = await prisma.flight.findMany();
-    res.json(data);
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await prisma.$transaction([
+      prisma.flight.findMany({ skip, take: limit, orderBy: { flightId: 'asc' } }),
+      prisma.flight.count()
+    ]);
+
+    res.json({ data, total, page, limit });
   }
 
   static async getAllPassengers(req: Request, res: Response) {
-    const data = await prisma.passenger.findMany();
-    res.json(data);
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await prisma.$transaction([
+      prisma.passenger.findMany({ skip, take: limit, orderBy: { passengerId: 'asc' } }),
+      prisma.passenger.count()
+    ]);
+
+    res.json({ data, total, page, limit });
   }
 
   static async getBoardingPassDetails(req: Request, res: Response) {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
+
     try {
-      const results = await prisma.boardingPass.findMany({
-        include: {
-          passenger: true,
-          flight: {
-            include: {
-              aircraft: true
-            }
-          }
-        },
-        orderBy: {
-          boardingPassId: 'asc'
-        }
-      });
+      const [results, total] = await prisma.$transaction([
+        prisma.boardingPass.findMany({
+          skip,
+          take: limit,
+          include: {
+            passenger: true,
+            flight: { include: { aircraft: true } }
+          },
+          orderBy: { boardingPassId: 'asc' }
+        }),
+        prisma.boardingPass.count()
+      ]);
 
       const formattedResponse = results.map(bp => ({
         boarding_pass_id: bp.boardingPassId,
@@ -52,10 +78,10 @@ export class PublicDataController {
         aircraft_capacity: bp.flight.aircraft.capacity
       }));
 
-      res.json(formattedResponse);
+      res.json({ data: formattedResponse, total, page, limit });
     } catch (error) {
-        console.error(error);
-      res.status(500).json({ message: 'Error fetching details' });
+      console.error(error);
+      res.status(500).json({ message: 'Erro ao buscar detalhes de embarque.' });
     }
   }
 }

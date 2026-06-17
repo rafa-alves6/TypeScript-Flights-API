@@ -14,13 +14,13 @@ export class AuthController {
       const user = await userRepo.findByUsername(username);
 
       if (!user) {
-        res.status(401).json({ message: 'Invalid credentials' });
+        res.status(401).json({ message: 'Credenciais inválidas.' });
         return;
       }
 
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
-        res.status(401).json({ message: 'Invalid credentials' });
+        res.status(401).json({ message: 'Credenciais inválidas.' });
         return;
       }
 
@@ -30,9 +30,18 @@ export class AuthController {
         { expiresIn: '1h' }
       );
 
-      res.json({ token });
+      // Retornamos também os dados básicos do usuário para o frontend salvar no estado
+      res.json({ 
+        token, 
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          role: user.role 
+        } 
+      });
     } catch (error) {
-      res.status(500).json({ message: 'Internal server error' });
+      console.error(error);
+      res.status(500).json({ message: 'Erro interno do servidor.' });
     }
   }
 }

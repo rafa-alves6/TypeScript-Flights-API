@@ -1,20 +1,54 @@
 import { Router } from 'express';
+import { z } from 'zod';
+import rateLimit from 'express-rate-limit';
 import { AuthController } from './controllers/AuthController';
 import { UserController } from './controllers/UserController';
 import { PublicDataController } from './controllers/PublicDataController';
-import { authenticateToken, requireAdmin } from './middleware/auth';
+import { authenticateToken, requireAdmin, requireOperator, validateSchema } from './middleware/auth';
 
 const router = Router();
+
+// --- SCHEMAS DE VALIDAÇÃO (ZOD) ---
+const loginSchema = z.object({
+  username: z.string({ required_error: "Nome de usuário é obrigatório." }).min(1),
+  password: z.string({ required_error: "Senha é obrigatória." }).min(1)
+});
+
+const createUserSchema = z.object({
+  username: z.string({ required_error: "Nome de usuário é obrigatório." }).min(3),
+  password: z.string({ required_error: "Senha é obrigatória." }).min(6),
+  role: z.enum(['admin', 'regular']).optional().default('regular')
+});
+
+const updateUserSchema = z.object({
+  username: z.string().min(3).optional(),
+  password: z.string().min(6).optional()
+}).refine(data => data.username || data.password, {
+  message: "Forneça pelo menos um campo para atualizar."
+});
+
+// --- SEGURANÇA (RATE LIMITING) ---
+const retryTimerMinutes = 5;
+const maxRequestsPerWindow = 10
+const loginLimiter = rateLimit({
+  windowMs: retryTimerMinutes * 60 * 1000,
+  max: maxRequestsPerWindow,
+  message: { message: `Muitas tentativas de login. Tente novamente em ${retryTimerMinutes} minutos.` },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 /**
  * @swagger
  * tags:
- *   - name: Auth
- *     description: Rotas de autenticação
- *   - name: Public Data
- *     description: Consultas públicas de voos e passageiros
- *   - name: Users
- *     description: Gestão de usuários do sistema (Requer Login)
+ *   - name: Autenticação
+ *     description: Rotas de login e sessão
+ *   - name: Dados Públicos
+ *     description: Consultas de aeronaves e voos (Sem PII)
+ *   - name: Gestão de Usuários
+ *     description: CRUD de usuários do sistema (Requer Login)
+ *   - name: Operações de Voo
+ *     description: Acesso a passageiros e cartões de embarque (Requer Operador)
  */
 
 // --- ROTAS PÚBLICAS ---
@@ -24,7 +58,7 @@ const router = Router();
  * /api/login:
  *   post:
  *     summary: Realiza login no sistema
- *     tags: [Auth]
+ *     tags: [Autenticação]
  *     requestBody:
  *       required: true
  *       content:
@@ -44,43 +78,24 @@ const router = Router();
  *     responses:
  *       200:
  *         description: Login realizado com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 token:
- *                   type: string
- *                   description: Token JWT para autenticação nas rotas privadas
+ *       400:
+ *         description: Dados inválidos
  *       401:
  *         description: Credenciais inválidas
+ *       429:
+ *         description: Muitas tentativas de login
  */
-router.post('/login', AuthController.login);
+router.post('/login', loginLimiter, validateSchema(loginSchema), AuthController.login);
 
 /**
  * @swagger
  * /api/aircrafts:
  *   get:
  *     summary: Lista todas as aeronaves
- *     tags: [Public Data]
+ *     tags: [Dados Públicos]
  *     responses:
  *       200:
  *         description: Lista de aeronaves retornada com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   aircraftId:
- *                     type: integer
- *                   model:
- *                     type: string
- *                   manufacturer:
- *                     type: string
- *                   capacity:
- *                     type: integer
  */
 router.get('/aircrafts', PublicDataController.getAllAircrafts);
 
@@ -89,127 +104,60 @@ router.get('/aircrafts', PublicDataController.getAllAircrafts);
  * /api/flights:
  *   get:
  *     summary: Lista todos os voos
- *     tags: [Public Data]
+ *     tags: [Dados Públicos]
  *     responses:
  *       200:
  *         description: Lista de voos retornada com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   flightId:
- *                     type: integer
- *                   flightNumber:
- *                     type: string
- *                   departureAirport:
- *                     type: string
- *                   arrivalAirport:
- *                     type: string
- *                   departureTime:
- *                     type: string
- *                     format: date-time
- *                   arrivalTime:
- *                     type: string
- *                     format: date-time
  */
 router.get('/flights', PublicDataController.getAllFlights);
+
+
+// --- ROTAS PROTEGIDAS (OPERADOR E ADMIN) ---
 
 /**
  * @swagger
  * /api/passengers:
  *   get:
- *     summary: Lista todos os passageiros
- *     tags: [Public Data]
+ *     summary: Lista todos os passageiros (Requer Operador ou Admin)
+ *     tags: [Operações de Voo]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Lista de passageiros retornada com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   passengerId:
- *                     type: integer
- *                   firstName:
- *                     type: string
- *                   lastName:
- *                     type: string
- *                   birthDate:
- *                     type: string
- *                     format: date-time
- *                   passportNumber:
- *                     type: string
+ *         description: Lista de passageiros
+ *       401:
+ *         description: Não autorizado
+ *       403:
+ *         description: Acesso negado
  */
-router.get('/passengers', PublicDataController.getAllPassengers);
+router.get('/passengers', authenticateToken, requireOperator, PublicDataController.getAllPassengers);
 
 /**
  * @swagger
  * /api/boarding-details:
  *   get:
- *     summary: Detalhes completos de embarque (Big Query)
- *     description: Retorna uma junção de dados (JOIN) entre Cartão de Embarque, Passageiro, Voo e Aeronave. Usado para teste de carga.
- *     tags: [Public Data]
+ *     summary: Detalhes completos de embarque (JOIN complexo)
+ *     description: Retorna cartões de embarque com dados pessoais dos passageiros. (Requer Operador ou Admin)
+ *     tags: [Operações de Voo]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Dados detalhados retornados com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   boarding_pass_id:
- *                     type: integer
- *                   seat_number:
- *                     type: string
- *                   issue_time:
- *                     type: string
- *                     format: date-time
- *                   passenger_first_name:
- *                     type: string
- *                   passenger_last_name:
- *                     type: string
- *                   passenger_birth_date:
- *                     type: string
- *                     format: date-time
- *                   passenger_passport_number:
- *                     type: string
- *                   flight_number:
- *                     type: string
- *                   departure_airport:
- *                     type: string
- *                   arrival_airport:
- *                     type: string
- *                   departure_time:
- *                     type: string
- *                     format: date-time
- *                   arrival_time:
- *                     type: string
- *                     format: date-time
- *                   aircraft_model:
- *                     type: string
- *                   aircraft_manufacturer:
- *                     type: string
- *                   aircraft_capacity:
- *                     type: integer
+ *       401:
+ *         description: Não autorizado
  */
-router.get('/boarding-details', PublicDataController.getBoardingPassDetails); 
+router.get('/boarding-details', authenticateToken, requireOperator, PublicDataController.getBoardingPassDetails); 
 
-// --- ROTAS PRIVADAS ---
+
+// --- ROTAS PRIVADAS (ADMIN) ---
 
 /**
  * @swagger
  * /api/users:
  *   post:
- *     summary: Cria um novo usuário operador
- *     description: Apenas usuários 'admin' podem criar novos operadores.
- *     tags: [Users]
+ *     summary: Cria um novo usuário (Apenas Admins)
+ *     tags: [Gestão de Usuários]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -229,24 +177,35 @@ router.get('/boarding-details', PublicDataController.getBoardingPassDetails);
  *               role:
  *                 type: string
  *                 enum: [admin, regular]
- *                 default: regular
  *     responses:
  *       201:
  *         description: Usuário criado com sucesso
  *       403:
- *         description: Acesso negado (Requer Admin)
- *       401:
- *         description: Não autorizado (Token inválido ou ausente)
+ *         description: Acesso negado
  */
-router.post('/users', authenticateToken, requireAdmin, UserController.create);
+router.post('/users', authenticateToken, requireAdmin, validateSchema(createUserSchema), UserController.create);
+
+/**
+ * @swagger
+ * /api/users:
+ *   get:
+ *     summary: Lista todos os usuários (Apenas Admins)
+ *     tags: [Gestão de Usuários]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de usuários
+ */
+router.get('/users', authenticateToken, requireAdmin, UserController.getAll);
 
 /**
  * @swagger
  * /api/users/{id}:
  *   put:
- *     summary: Atualiza um usuário existente
- *     description: Admins podem atualizar qualquer usuário. Usuários comuns só atualizam a si mesmos.
- *     tags: [Users]
+ *     summary: Atualiza um usuário
+ *     description: Admins atualizam qualquer um. Usuários comuns atualizam apenas a si mesmos.
+ *     tags: [Gestão de Usuários]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -255,7 +214,6 @@ router.post('/users', authenticateToken, requireAdmin, UserController.create);
  *         schema:
  *           type: integer
  *         required: true
- *         description: ID do usuário
  *     requestBody:
  *       required: true
  *       content:
@@ -271,17 +229,16 @@ router.post('/users', authenticateToken, requireAdmin, UserController.create);
  *       200:
  *         description: Usuário atualizado
  *       403:
- *         description: Proibido (Tentativa de alterar outro usuário sem ser admin)
+ *         description: Proibido
  */
-router.put('/users/:id', authenticateToken, UserController.update);
+router.put('/users/:id', authenticateToken, validateSchema(updateUserSchema), UserController.update);
 
 /**
  * @swagger
  * /api/users/{id}:
  *   delete:
- *     summary: Remove um usuário do sistema
- *     description: Apenas administradores podem deletar usuários.
- *     tags: [Users]
+ *     summary: Remove um usuário (Apenas Admins)
+ *     tags: [Gestão de Usuários]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -290,12 +247,11 @@ router.put('/users/:id', authenticateToken, UserController.update);
  *         schema:
  *           type: integer
  *         required: true
- *         description: ID do usuário a ser deletado
  *     responses:
  *       204:
- *         description: Usuário deletado com sucesso
+ *         description: Usuário deletado
  *       403:
- *         description: Acesso negado (Requer Admin)
+ *         description: Acesso negado
  */
 router.delete('/users/:id', authenticateToken, requireAdmin, UserController.delete);
 

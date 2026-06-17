@@ -6,6 +6,17 @@ import bcrypt from 'bcryptjs';
 const userRepo = new UserRepository(prisma);
 
 export class UserController {
+  static async getAll(req: Request, res: Response): Promise<void> {
+    try {
+      const users = await userRepo.findAll();
+      // Remove a senha do retorno por segurança
+      const usersWithoutPassword = users.map(({ password, ...rest }) => rest);
+      res.json(usersWithoutPassword);
+    } catch (error) {
+      res.status(500).json({ message: 'Erro ao buscar usuários.' });
+    }
+  }
+
   static async create(req: Request, res: Response): Promise<void> {
     const { username, password, role } = req.body;
     try {
@@ -17,8 +28,12 @@ export class UserController {
       });
       const { password: _, ...userWithoutPassword } = newUser;
       res.status(201).json(userWithoutPassword);
-    } catch (error) {
-      res.status(400).json({ message: 'Error creating user' });
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        res.status(400).json({ message: 'Nome de usuário já existe.' });
+      } else {
+        res.status(400).json({ message: 'Erro ao criar usuário.' });
+      }
     }
   }
 
@@ -29,12 +44,13 @@ export class UserController {
     const requestUser = (req as any).user;
 
     if (requestUser.role !== 'admin' && requestUser.id !== id) {
-       res.status(403).json({ message: 'Forbidden' });
+       res.status(403).json({ message: 'Proibido: Você só pode alterar seu próprio perfil.' });
        return;
     }
 
     try {
-      const data: any = { username };
+      const data: any = {};
+      if (username) data.username = username;
       if (password) {
         data.password = await bcrypt.hash(password, 10);
       }
@@ -42,8 +58,12 @@ export class UserController {
       const updatedUser = await userRepo.update(id, data);
       const { password: _, ...userResponse } = updatedUser;
       res.json(userResponse);
-    } catch (error) {
-      res.status(400).json({ message: 'Error updating user' });
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        res.status(400).json({ message: 'Nome de usuário já existe.' });
+      } else {
+        res.status(400).json({ message: 'Erro ao atualizar usuário.' });
+      }
     }
   }
 
@@ -53,7 +73,7 @@ export class UserController {
       await userRepo.delete(id);
       res.status(204).send();
     } catch (error) {
-      res.status(400).json({ message: 'Error deleting user' });
+      res.status(400).json({ message: 'Erro ao deletar usuário.' });
     }
   }
 }
