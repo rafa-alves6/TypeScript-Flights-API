@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "library"
 }
 
@@ -19,28 +19,10 @@ model SysUser {
   password String
   role     UserRole @default(regular)
 
+  flightsCreated    Flight[]    @relation("FlightCreator")
+  passengersCreated Passenger[] @relation("PassengerCreator")
+
   @@map("sys_user")
-}
-
-model Aircraft {
-  aircraftId   Int      @id @default(autoincrement()) @map("aircraft_id")
-  model        String
-  manufacturer String
-  capacity     Int
-  flights      Flight[]
-
-  @@map("aircraft")
-}
-
-model Passenger {
-  passengerId    Int            @id @default(autoincrement()) @map("passenger_id")
-  firstName      String         @map("first_name")
-  lastName       String         @map("last_name")
-  birthDate      DateTime       @map("birth_date") @db.Date
-  passportNumber String         @map("passport_number")
-  boardingPasses BoardingPass[]
-
-  @@map("passenger")
 }
 
 model Flight {
@@ -54,17 +36,47 @@ model Flight {
   aircraft         Aircraft       @relation(fields: [aircraftId], references: [aircraftId])
   boardingPasses   BoardingPass[]
 
+  createdById Int?      @map("created_by_id")
+  createdBy   SysUser?  @relation("FlightCreator", fields: [createdById], references: [id])
+
   @@map("flight")
 }
 
+model Passenger {
+  passengerId    Int            @id @default(autoincrement()) @map("passenger_id")
+  firstName      String         @map("first_name")
+  lastName       String         @map("last_name")
+  birthDate      DateTime       @map("birth_date") @db.Date
+  passportNumber String         @map("passport_number")
+  boardingPasses BoardingPass[]
+
+  createdById Int?      @map("created_by_id")
+  createdBy   SysUser?  @relation("PassengerCreator", fields: [createdById], references: [id])
+
+  @@map("passenger")
+}
+
+model Aircraft {
+  aircraftId   Int      @id @default(autoincrement()) @map("aircraft_id")
+  model        String
+  manufacturer String
+  capacity     Int
+
+  flights Flight[]
+
+  @@map("aircraft")
+}
+
 model BoardingPass {
-  boardingPassId Int       @id @default(autoincrement()) @map("boarding_pass_id")
-  seatNumber     String    @map("seat_number")
-  issueTime      DateTime  @default(now()) @map("issue_time")
-  passengerId    Int       @map("passenger_id")
-  flightId       Int       @map("flight_id")
-  passenger      Passenger @relation(fields: [passengerId], references: [passengerId])
-  flight         Flight    @relation(fields: [flightId], references: [flightId])
+  boardingPassId Int      @id @default(autoincrement()) @map("boarding_pass_id")
+  seatNumber     String   @map("seat_number")
+  issueTime      DateTime @default(now()) @map("issue_time")
+
+  passengerId Int @map("passenger_id")
+  flightId    Int @map("flight_id")
+
+  passenger Passenger @relation(fields: [passengerId], references: [passengerId])
+  flight    Flight    @relation(fields: [flightId], references: [flightId])
 
   @@map("boarding_pass")
 }
