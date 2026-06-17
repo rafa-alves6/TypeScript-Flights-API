@@ -21,6 +21,7 @@ Antes de começar, certifique-se de ter instalado em sua máquina:
 
 * [Node.js](https://nodejs.org/) (Versão 18 ou superior recomendada)
 * Gerenciador de pacotes npm
+* [Docker](https://www.docker.com/get-started/) (com Docker Compose V2)
 
 ---
 
