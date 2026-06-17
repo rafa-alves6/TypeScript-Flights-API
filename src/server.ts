@@ -16,22 +16,33 @@ const PORT = Number(process.env.PORT) || 3000;
 
 app.use(helmet());
 
-// Lista de origens permitidas (Dev + Produção)
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://rafaelalves.dev.br",
-  "https://www.rafaelalves.dev.br",
-];
-
 const corsOptions = {
   origin: function (
     origin: string | undefined,
     callback: (err: Error | null, allow?: boolean) => void,
   ) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    // Permite requisições sem origem (Postman, curl, apps mobile)
+    if (!origin) return callback(null, true);
+
+    // Ambientes de desenvolvimento local
+    const allowedExactOrigins = [
+      "http://localhost:5173",
+      "http://localhost:3000",
+    ];
+
+    // Regex mágica: Aceita o domínio principal, subdomínios e domínios do Amplify
+    // Exemplos que passarão:
+    // https://zephyros.rafaelalves.dev.br
+    // https://rafaelalves.dev.br
+    // https://main.d12345.amplifyapp.com
+    const allowedRegex =
+      /^https:\/\/([a-z0-9-]+\.)?(rafaelalves\.dev\.br|amplifyapp\.com)$/;
+
+    if (allowedExactOrigins.includes(origin) || allowedRegex.test(origin)) {
       callback(null, true);
     } else {
+      // Log para debug: Se algo for bloqueado, você verá no terminal do Docker
+      console.log(`[CORS] Bloqueado: ${origin}`);
       callback(new Error("Not allowed by CORS"));
     }
   },

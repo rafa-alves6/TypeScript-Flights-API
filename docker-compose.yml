@@ -17,7 +17,7 @@ api:
   environment:
     DATABASE_URL: postgres://userifs:senha-ifs@db:5432/demo-flight_ts
     JWT_SECRET: 8Ojpk4yIoe0Vgytrrzp1NFZGE5X2WEhu3frYrZ4p1r2
-    FRONTEND_URL: https://rafaelalves.dev.br
+    FRONTEND_URL: https://zephyros.rafaelalves.dev.br
     PORT: 3000
   depends_on:
     - db
