@@ -105,4 +105,18 @@ Requer Header: `Authorization: Bearer <SEU_TOKEN>`
 **DELETE** `/api/users/:id` (Apenas Admin)
 - Remove um usuário.
 
+### 5. Definição da estratégia RBAC
+ O sistema utiliza um modelo de Role-Based Access Control (RBAC) para proteger dados sensíveis e restringir ações administrativas. As regras são aplicadas tanto no Backend (Middleware de Autorização) quanto no Frontend (Redirecionamento de Rotas e Renderização Condicional).
+
+| Papel (Role) | Perfil de Usuário | Permissões e Capabilidades | Endpoints / Recursos Protegidos |
+| :--- | :--- | :--- | :--- |
+| **Público** | Usuário não autenticado (Visitante) | Pode consultar informações gerais que não expõem dados pessoais (PII). | `GET /api/aircrafts`<br>`GET /api/flights`<br>`POST /api/login` |
+| **Operador** | `regular` (Staff de Solo / Check-in) | Focado no atendimento ao passageiro. Tem acesso a dados sensíveis necessários para o embarque, mas não pode alterar a estrutura do sistema. | Herda permissões Públicas +<br>`GET /api/passengers`<br>`GET /api/boarding-details`<br>`PUT /api/users/:id` (Apenas o próprio perfil) |
+| **Administrador** | `admin` (TI / Gerência) | Controle total do sistema. Gerencia usuários, frota e configurações. | Herda todas as permissões anteriores +<br>`POST /api/users` (Criar novos operadores/admins)<br>`DELETE /api/users/:id` |
+
+### Regras de Segurança Implementadas
+1. **Proteção de PII (Dados Pessoais):** Rotas que retornam passaportes, datas de nascimento e listas de passageiros exigem autenticação de nível `regular` ou `admin`.
+2. **Validação de Dados (Zod):** Todas as rotas de escrita (POST/PUT) validam o *payload* antes de chegar ao banco de dados para prevenir injeção de dados malformados.
+3. **Rate Limiting:** A rota de login possui um limitador de taxa (10 tentativas a cada 5 minutos por IP) para mitigar ataques de força bruta.
+
 ---
