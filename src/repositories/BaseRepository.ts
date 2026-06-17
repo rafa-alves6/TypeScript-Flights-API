@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 export abstract class BaseRepository<T> {
   protected prisma: PrismaClient;
@@ -13,10 +13,9 @@ export abstract class BaseRepository<T> {
     return this.model.findMany();
   }
 
-  async findById(id: number, idField: string = 'id'): Promise<T | null> {
+  async findById(id: number, idField: string = "id"): Promise<T | null> {
     return this.model.findUnique({
       where: { [idField]: id },
     });
   }
-
 }

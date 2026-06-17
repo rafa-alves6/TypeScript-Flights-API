@@ -1,9 +1,9 @@
-import { PrismaClient, SysUser } from '@prisma/client';
-import { BaseRepository } from './BaseRepository';
+import { PrismaClient, SysUser } from "@prisma/client";
+import { BaseRepository } from "./BaseRepository";
 
 export class UserRepository extends BaseRepository<SysUser> {
   constructor(prisma: PrismaClient) {
-    super(prisma, 'sysUser');
+    super(prisma, "sysUser");
   }
 
   async findByUsername(username: string): Promise<SysUser | null> {
@@ -12,7 +12,7 @@ export class UserRepository extends BaseRepository<SysUser> {
     });
   }
 
-  async create(data: Omit<SysUser, 'id'>): Promise<SysUser> {
+  async create(data: Omit<SysUser, "id">): Promise<SysUser> {
     return this.prisma.sysUser.create({ data });
   }
 
