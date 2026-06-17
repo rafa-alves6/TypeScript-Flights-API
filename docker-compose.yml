@@ -1,15 +1,49 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: flight_db
-    ports:
-      - "5433:5432"
+    restart: always
     environment:
-      - POSTGRES_USER=userifs
-      - POSTGRES_PASSWORD=senha-ifs
-      - POSTGRES_DB=demo-flight_ts
+      POSTGRES_USER: userifs
+      POSTGRES_PASSWORD: senha-ifs
+      POSTGRES_DB: demo-flight_ts
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+api:
+  build: .
+  restart: always
+  environment:
+    DATABASE_URL: postgres://userifs:senha-ifs@db:5432/demo-flight_ts
+    JWT_SECRET: 8Ojpk4yIoe0Vgytrrzp1NFZGE5X2WEhu3frYrZ4p1r2
+    FRONTEND_URL: https://rafaelalves.dev.br
+    PORT: 3000
+  depends_on:
+    - db
+  networks:
+    - app-network
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+    networks:
+      - app-network
 
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  app-network:
+    driver: bridge

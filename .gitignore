@@ -1,5 +1,21 @@
-node_modules
-# Keep environment variables out of version control
+# Node
+node_modules/
+dist/
 .env
+.env.local
 
-/generated/prisma
+# Prisma
+prisma/migrations/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Sistema
+.DS_Store
+*.pem
+
+# Frontend (Será buildado na Vercel/Amplify, não precisa subir node_modules dele)
+frontend/node_modules/
+frontend/dist/
