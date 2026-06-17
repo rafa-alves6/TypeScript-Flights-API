@@ -1,203 +1,283 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import api from '../services/api';
-import type { User, ApiError, CreateUserPayload } from '../types/api';
-import { AxiosError } from 'axios';
-import { useAuth } from '../hooks/useAuth';
+import { useEffect, useState, type SyntheticEvent } from "react";
+import api from "../services/api";
+import type { User, ApiError, CreateUserPayload } from "../types/api";
+import { AxiosError } from "axios";
+import { useAuth } from "../hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Trash2, UserPlus, AlertCircle, CheckCircle2 } from "lucide-react";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export const Users = () => {
   const { isAdmin } = useAuth();
-  
-  // Inicializamos users como null. Se for null, significa que ainda está carregando ou buscando dados.
+
   const [users, setUsers] = useState<User[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
-  // Estados do formulário
-  const [newUsername, setNewUsername] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [newRole, setNewRole] = useState<'admin' | 'regular'>('regular');
-  
-  const [formError, setFormError] = useState('');
-  const [formSuccess, setFormSuccess] = useState('');
+
+  const [newUsername, setNewUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState(""); // NOVO ESTADO
+  const [newRole, setNewRole] = useState<"admin" | "regular">("regular");
+
+  const [formError, setFormError] = useState("");
+  const [formSuccess, setFormSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Sincronização com a API (Busca inicial de dados)
   useEffect(() => {
     if (!isAdmin) return;
-    
-    let ignore = false; 
-    
-    // Não chamamos setLoading(true) aqui. O estado inicial 'null' já indica carregamento.
-    api.get<User[]>('/users')
-      .then(res => {
+    let ignore = false;
+    api
+      .get<User[]>("/users")
+      .then((res) => {
         if (!ignore) {
           setUsers(res.data);
           setError(null);
         }
       })
       .catch(() => {
-        if (!ignore) {
-          setError('Erro ao carregar a lista de usuários.');
-        }
+        if (!ignore) setError("Erro ao carregar a lista de usuários.");
       });
-
     return () => {
-      ignore = true; // Previne race conditions
+      ignore = true;
     };
   }, [isAdmin]);
 
   const fetchUsers = async () => {
     try {
-      const res = await api.get<User[]>('/users');
+      const res = await api.get<User[]>("/users");
       setUsers(res.data);
-      setError(null);
     } catch (err) {
-      console.error("Erro ao recarregar usuários", err);
+      console.error(err);
     }
   };
 
-  // Event Handler: Criação de usuário (Lógica de evento, não de efeito)
-  const handleCreateUser = async (e: FormEvent<HTMLFormElement>) => {
+  const handleCreateUser = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setFormError('');
-    setFormSuccess('');
-    setSubmitting(true);
+    setFormError("");
+    setFormSuccess("");
 
+    // Validação de Confirmação de Senha
+    if (newPassword !== confirmPassword) {
+      setFormError("A senha e a confirmação não coincidem.");
+      return;
+    }
+
+    setSubmitting(true);
     try {
       const payload: CreateUserPayload = {
         username: newUsername,
         password: newPassword,
-        role: newRole
+        role: newRole,
       };
-      
-      await api.post('/users', payload);
-      
+      await api.post("/users", payload);
+
       setFormSuccess(`Usuário "${newUsername}" criado com sucesso!`);
-      setNewUsername('');
-      setNewPassword('');
-      setNewRole('regular');
-      
-      await fetchUsers(); 
+      setNewUsername("");
+      setNewPassword("");
+      setConfirmPassword(""); // LIMPA A CONFIRMAÇÃO
+      setNewRole("regular");
+      await fetchUsers();
     } catch (err) {
       const axiosError = err as AxiosError<ApiError>;
-      setFormError(axiosError.response?.data?.message || 'Erro ao criar usuário.');
+      setFormError(
+        axiosError.response?.data?.message || "Erro ao criar usuário.",
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Event Handler: Exclusão de usuário
   const handleDeleteUser = async (id: number, username: string) => {
-    if (!window.confirm(`Tem certeza que deseja excluir o usuário "${username}"?`)) return;
-
+    if (
+      !window.confirm(`Tem certeza que deseja excluir o usuário "${username}"?`)
+    )
+      return;
     try {
       await api.delete(`/users/${id}`);
-      // Atualiza o estado local removendo o usuário excluído
-      setUsers(prev => prev ? prev.filter(u => u.id !== id) : null); 
+      setUsers((prev) => (prev ? prev.filter((u) => u.id !== id) : null));
       setFormSuccess(`Usuário "${username}" excluído.`);
     } catch (err) {
       const axiosError = err as AxiosError<ApiError>;
-      setFormError(axiosError.response?.data?.message || 'Erro ao excluir usuário.');
+      setFormError(
+        axiosError.response?.data?.message || "Erro ao excluir usuário.",
+      );
     }
   };
 
-  if (!isAdmin) return <div className="container"><h2>Acesso Restrito</h2></div>;
-
-  // Derivação de estado: Se users é null e não há erro, está carregando.
-  if (users === null && !error) {
-    return <div className="container"><h2>Carregando usuários...</h2></div>;
-  }
+  if (!isAdmin)
+    return (
+      <div className="container mx-auto py-8">
+        <h2 className="text-2xl font-bold text-destructive">Acesso Restrito</h2>
+      </div>
+    );
+  if (users === null && !error)
+    return <div className="container mx-auto py-8">Carregando...</div>;
 
   return (
-    <div className="container">
-      <h2>Gestão de Usuários do Sistema</h2>
-      
-      {formError && <div className="alert alert-danger">{formError}</div>}
+    <div className="container mx-auto py-8 space-y-8 px-4">
+      <h2 className="text-3xl font-bold tracking-tight">Gestão de Usuários</h2>
+
+      {formError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{formError}</AlertDescription>
+        </Alert>
+      )}
       {formSuccess && (
-        <div style={{ color: '#155724', backgroundColor: '#d4edda', borderColor: '#c3e6cb', padding: '15px', marginBottom: '20px', borderRadius: '4px' }}>
-          {formSuccess}
-        </div>
+        <Alert className="border-green-500 text-green-700 bg-green-50">
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertDescription>{formSuccess}</AlertDescription>
+        </Alert>
       )}
 
-      <div className="card">
-        <h3>Criar Novo Usuário</h3>
-        <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxWidth: '400px' }}>
-          <div>
-            <label>Nome de Usuário</label>
-            <input 
-              type="text" 
-              value={newUsername} 
-              onChange={e => setNewUsername(e.target.value)} 
-              required 
-              minLength={3}
-              style={{ width: '100%', padding: '8px', marginTop: '5px', boxSizing: 'border-box' }} 
-            />
-          </div>
-          <div>
-            <label>Senha</label>
-            <input 
-              type="password" 
-              value={newPassword} 
-              onChange={e => setNewPassword(e.target.value)} 
-              required 
-              minLength={6}
-              style={{ width: '100%', padding: '8px', marginTop: '5px', boxSizing: 'border-box' }} 
-            />
-          </div>
-          <div>
-            <label>Nível de Acesso</label>
-            <select 
-              value={newRole} 
-              onChange={e => setNewRole(e.target.value as 'admin' | 'regular')}
-              style={{ width: '100%', padding: '8px', marginTop: '5px', boxSizing: 'border-box' }}
-            >
-              <option value="regular">Operador</option>
-              <option value="admin">Administrador</option>
-            </select>
-          </div>
-          <button 
-            type="submit" 
-            disabled={submitting} 
-            style={{ padding: '10px 15px', background: '#003366', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', width: 'fit-content' }}
-          >
-            {submitting ? 'Criando...' : '+ Criar Usuário'}
-          </button>
-        </form>
+      <div className="grid md:grid-cols-2 gap-8">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" /> Criar Novo Usuário
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nome de Usuário</Label>
+                <Input
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  required
+                  minLength={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Senha</Label>
+                <PasswordInput
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Confirmar Senha</Label>
+                <PasswordInput
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Nível de Acesso</Label>
+                <Select
+                  value={newRole}
+                  onValueChange={(val: string) =>
+                    setNewRole(val as "admin" | "regular")
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o perfil" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="regular">Operador</SelectItem>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="submit" className="w-full" disabled={submitting}>
+                {submitting ? "Criando..." : "Criar Usuário"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Resumo do Sistema</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Total de usuários cadastrados:{" "}
+              <span className="font-bold text-foreground">
+                {users?.length || 0}
+              </span>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Administradores:{" "}
+              <span className="font-bold text-foreground">
+                {users?.filter((u) => u.role === "admin").length || 0}
+              </span>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Operadores:{" "}
+              <span className="font-bold text-foreground">
+                {users?.filter((u) => u.role === "regular").length || 0}
+              </span>
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="card">
-        <h3>Usuários Cadastrados</h3>
-        {error ? (
-          <div className="alert alert-danger">{error}</div>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Usuário</th>
-                <th>Perfil</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users && users.map(u => (
-                <tr key={u.id}>
-                  <td>{u.id}</td>
-                  <td>{u.username}</td>
-                  <td>{u.role === 'admin' ? 'Administrador' : 'Operador'}</td>
-                  <td>
-                    <button 
-                      onClick={() => handleDeleteUser(u.id, u.username)}
-                      style={{ padding: '5px 10px', background: '#ff4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                    >
-                      Excluir
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Usuários Cadastrados</CardTitle>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          {error ? (
+            <Alert variant="destructive">{error}</Alert>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Usuário</TableHead>
+                  <TableHead>Perfil</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users &&
+                  users.map((u) => (
+                    <TableRow key={u.id}>
+                      <TableCell className="font-medium">{u.id}</TableCell>
+                      <TableCell>{u.username}</TableCell>
+                      <TableCell>
+                        {u.role === "admin" ? "Administrador" : "Operador"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteUser(u.id, u.username)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

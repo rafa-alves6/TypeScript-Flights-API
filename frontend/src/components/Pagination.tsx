@@ -1,10 +1,17 @@
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
 }
 
-export const Pagination = ({ currentPage, totalPages, onPageChange }: PaginationProps) => {
+export const Pagination = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: PaginationProps) => {
   if (totalPages <= 1) return null;
 
   const pages = [];
@@ -16,44 +23,42 @@ export const Pagination = ({ currentPage, totalPages, onPageChange }: Pagination
   }
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '25px', alignItems: 'center', flexWrap: 'wrap' }}>
-      <button 
-        onClick={() => onPageChange(currentPage - 1)} 
+    <div className="flex justify-center gap-2 mt-4 items-center flex-wrap">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        style={{ padding: '8px 16px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1, borderRadius: '4px', border: '1px solid #ccc', background: 'white' }}
       >
-        Anterior
-      </button>
-      
-      {start > 1 && <span style={{ padding: '0 8px' }}>...</span>}
-      
-      {pages.map(p => (
-        <button
+        <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+      </Button>
+
+      {start > 1 && <span className="px-2 text-muted-foreground">...</span>}
+
+      {pages.map((p) => (
+        <Button
           key={p}
+          variant={p === currentPage ? "default" : "outline"}
+          size="sm"
           onClick={() => onPageChange(p)}
-          style={{
-            padding: '8px 14px',
-            background: p === currentPage ? '#003366' : '#f8f9fa',
-            color: p === currentPage ? 'white' : '#333',
-            border: p === currentPage ? 'none' : '1px solid #ccc',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontWeight: p === currentPage ? 'bold' : 'normal'
-          }}
+          className="w-9"
         >
           {p}
-        </button>
+        </Button>
       ))}
 
-      {end < totalPages && <span style={{ padding: '0 8px' }}>...</span>}
+      {end < totalPages && (
+        <span className="px-2 text-muted-foreground">...</span>
+      )}
 
-      <button 
-        onClick={() => onPageChange(currentPage + 1)} 
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        style={{ padding: '8px 16px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1, borderRadius: '4px', border: '1px solid #ccc', background: 'white' }}
       >
-        Próxima
-      </button>
+        Próxima <ChevronRight className="h-4 w-4 ml-1" />
+      </Button>
     </div>
   );
 };

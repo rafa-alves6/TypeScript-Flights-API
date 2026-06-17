@@ -1,7 +1,7 @@
 export interface User {
   id: number;
   username: string;
-  role: 'admin' | 'regular';
+  role: "admin" | "regular";
 }
 
 export interface Flight {
@@ -12,6 +12,7 @@ export interface Flight {
   departureTime: string;
   arrivalTime: string;
   aircraftId: number;
+  createdBy?: { id: number; username: string };
 }
 
 export interface Passenger {
@@ -20,6 +21,14 @@ export interface Passenger {
   lastName: string;
   birthDate: string;
   passportNumber: string;
+  createdBy?: { id: number; username: string };
+}
+
+export interface Aircraft {
+  aircraftId: number;
+  model: string;
+  manufacturer: string;
+  capacity: number;
 }
 
 export interface LoginResponse {
@@ -35,7 +44,23 @@ export interface ApiError {
 export interface CreateUserPayload {
   username: string;
   password: string;
-  role: 'admin' | 'regular';
+  role: "admin" | "regular";
+}
+
+export interface CreateFlightPayload {
+  flightNumber: string;
+  departureAirport: string;
+  arrivalAirport: string;
+  departureTime: string;
+  arrivalTime: string;
+  aircraftId: number;
+}
+
+export interface CreatePassengerPayload {
+  firstName: string;
+  lastName: string;
+  birthDate: string;
+  passportNumber: string;
 }
 
 export interface PaginatedResponse<T> {
