@@ -41,7 +41,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "../hooks/useAuth";
 
 export const Flights = () => {
-  const { isAdmin, isOperator, user } = useAuth();
+  const { isAdmin, isOperator, user, isAuthenticated } = useAuth();
   const [page, setPage] = useState(1);
   const [flights, setFlights] = useState<Flight[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -345,9 +345,14 @@ export const Flights = () => {
                       <TableHead className="whitespace-nowrap">
                         Chegada
                       </TableHead>
-                      <TableHead className="whitespace-nowrap">
-                        Criado por
-                      </TableHead>
+
+                      {/* Só renderiza a coluna se o usuário estiver logado */}
+                      {isAuthenticated && (
+                        <TableHead className="whitespace-nowrap">
+                          Criado por
+                        </TableHead>
+                      )}
+
                       {isOperator && (
                         <TableHead className="text-right whitespace-nowrap">
                           Ações
@@ -355,34 +360,44 @@ export const Flights = () => {
                       )}
                     </TableRow>
                   </TableHeader>
+
                   <TableBody>
                     {flights.map((f) => (
                       <TableRow key={f.flightId}>
                         <TableCell className="font-medium whitespace-nowrap">
                           {f.flightNumber}
                         </TableCell>
+
                         <TableCell className="whitespace-nowrap">
                           {f.departureAirport}
                         </TableCell>
+
                         <TableCell className="whitespace-nowrap">
                           {f.arrivalAirport}
                         </TableCell>
+
                         <TableCell className="whitespace-nowrap text-xs md:text-sm">
                           {new Date(f.departureTime).toLocaleString("pt-BR")}
                         </TableCell>
+
                         <TableCell className="whitespace-nowrap text-xs md:text-sm">
                           {new Date(f.arrivalTime).toLocaleString("pt-BR")}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                          {f.createdBy ? (
-                            <span className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              {f.createdBy.username}
-                            </span>
-                          ) : (
-                            "—"
-                          )}
-                        </TableCell>
+
+                        {/* Só renderiza a célula se o usuário estiver logado */}
+                        {isAuthenticated && (
+                          <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                            {f.createdBy ? (
+                              <span className="flex items-center gap-1">
+                                <User className="h-3 w-3" />
+                                {f.createdBy.username}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                        )}
+
                         {isOperator && (
                           <TableCell className="text-right whitespace-nowrap">
                             <div className="flex justify-end gap-2">
@@ -395,6 +410,7 @@ export const Flights = () => {
                                   <Pencil className="h-4 w-4" />
                                 </Button>
                               )}
+
                               {isAdmin && (
                                 <Button
                                   variant="ghost"

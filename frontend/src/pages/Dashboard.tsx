@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plane, Users, ShieldCheck } from "lucide-react";
@@ -6,9 +7,7 @@ export const Dashboard = () => {
   const { user, isOperator, isAdmin } = useAuth();
 
   return (
-    // Reduzido py-8 para py-4 no mobile, px-4 para garantir margem
     <div className="container mx-auto py-4 md:py-8 space-y-6 px-4">
-      {/* Título menor no mobile (text-2xl) */}
       <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
         Painel de Controle
       </h2>
@@ -26,43 +25,59 @@ export const Dashboard = () => {
           </p>
 
           <ul className="flex flex-col gap-3">
-            <li className="flex items-start gap-3 p-3 md:p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
-              <Plane className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-              <div>
-                <p className="font-medium text-sm md:text-base">
-                  Consultar Frota e Voos
-                </p>
-                <p className="text-xs md:text-sm text-muted-foreground">
-                  Visualizar aeronaves e malha aérea.
-                </p>
-              </div>
+            <li>
+              {/* 👇 Transformado em Link com efeito de hover e cursor-pointer */}
+              <Link
+                to="/voos"
+                className="flex items-start gap-3 p-3 md:p-4 rounded-lg border bg-card text-card-foreground shadow-sm hover:bg-accent hover:text-accent-foreground transition-all duration-200 cursor-pointer group"
+              >
+                <Plane className="h-5 w-5 text-primary mt-0.5 shrink-0 group-hover:scale-110 transition-transform" />
+                <div>
+                  <p className="font-medium text-sm md:text-base">
+                    Consultar Frota e Voos
+                  </p>
+                  <p className="text-xs md:text-sm text-muted-foreground">
+                    Visualizar aeronaves e malha aérea.
+                  </p>
+                </div>
+              </Link>
             </li>
 
             {isOperator && (
-              <li className="flex items-start gap-3 p-3 md:p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
-                <Users className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-medium text-sm md:text-base">
-                    Acessar Passageiros (PII)
-                  </p>
-                  <p className="text-xs md:text-sm text-muted-foreground">
-                    Visualizar manifestos e dados sensíveis.
-                  </p>
-                </div>
+              <li>
+                <Link
+                  to="/passageiros"
+                  className="flex items-start gap-3 p-3 md:p-4 rounded-lg border bg-card text-card-foreground shadow-sm hover:bg-accent hover:text-accent-foreground transition-all duration-200 cursor-pointer group"
+                >
+                  <Users className="h-5 w-5 text-primary mt-0.5 shrink-0 group-hover:scale-110 transition-transform" />
+                  <div>
+                    <p className="font-medium text-sm md:text-base">
+                      Acessar Passageiros (PII)
+                    </p>
+                    <p className="text-xs md:text-sm text-muted-foreground">
+                      Visualizar manifestos e dados sensíveis.
+                    </p>
+                  </div>
+                </Link>
               </li>
             )}
 
             {isAdmin && (
-              <li className="flex items-start gap-3 p-3 md:p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
-                <ShieldCheck className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-medium text-sm md:text-base">
-                    Gerenciar Usuários
-                  </p>
-                  <p className="text-xs md:text-sm text-muted-foreground">
-                    Criar, editar e excluir operadores.
-                  </p>
-                </div>
+              <li>
+                <Link
+                  to="/usuarios"
+                  className="flex items-start gap-3 p-3 md:p-4 rounded-lg border bg-card text-card-foreground shadow-sm hover:bg-accent hover:text-accent-foreground transition-all duration-200 cursor-pointer group"
+                >
+                  <ShieldCheck className="h-5 w-5 text-primary mt-0.5 shrink-0 group-hover:scale-110 transition-transform" />
+                  <div>
+                    <p className="font-medium text-sm md:text-base">
+                      Gerenciar Usuários
+                    </p>
+                    <p className="text-xs md:text-sm text-muted-foreground">
+                      Criar, editar e excluir operadores.
+                    </p>
+                  </div>
+                </Link>
               </li>
             )}
           </ul>
