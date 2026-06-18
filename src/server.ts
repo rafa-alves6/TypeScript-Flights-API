@@ -30,7 +30,7 @@ const corsOptions = {
       "http://localhost:3000",
     ];
 
-    // Regex mágica: Aceita o domínio principal, subdomínios e domínios do Amplify
+    // Regex aceita o domínio principal, subdomínios e domínios do Amplify
     // Exemplos que passarão:
     // https://zephyros.rafaelalves.dev.br
     // https://rafaelalves.dev.br
