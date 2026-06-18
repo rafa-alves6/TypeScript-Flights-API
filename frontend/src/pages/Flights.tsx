@@ -39,6 +39,7 @@ import {
 import { PlaneTakeoff, Plus, Pencil, Trash2, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "../hooks/useAuth";
+import { cn } from "@/lib/utils"; // Importação do utilitário de classes do shadcn
 
 export const Flights = () => {
   const { isAdmin, isOperator, user, isAuthenticated } = useAuth();
@@ -66,9 +67,7 @@ export const Flights = () => {
         params: { limit: 100 },
       })
       .then((res) => {
-        if (Array.isArray(res.data.data)) {
-          setAircrafts(res.data.data);
-        }
+        if (Array.isArray(res.data.data)) setAircrafts(res.data.data);
       })
       .catch((err) => console.error("Erro ao carregar aeronaves:", err));
   }, []);
@@ -150,11 +149,10 @@ export const Flights = () => {
         arrivalTime: new Date(arrivalTime).toISOString(),
         aircraftId: Number(aircraftId),
       };
-      if (editingFlight) {
+      if (editingFlight)
         await api.put(`/flights/${editingFlight.flightId}`, payload);
-      } else {
-        await api.post("/flights", payload);
-      }
+      else await api.post("/flights", payload);
+
       setIsDialogOpen(false);
       resetForm();
       await fetchFlights();
@@ -181,6 +179,25 @@ export const Flights = () => {
   };
 
   const totalPages = Math.ceil(total / limit);
+
+  const totalCols = 5 + (isAuthenticated ? 1 : 0) + (isOperator ? 1 : 0);
+
+  const getHead = (idx: number) =>
+    cn(
+      "whitespace-nowrap",
+      idx === 0 ? "pl-4 md:pl-30 text-left" : "text-center",
+      idx === totalCols - 1 && "pr-4 md:pr-6",
+    );
+
+  const getCell = (idx: number, isActions = false) =>
+    cn(
+      "whitespace-nowrap text-xs md:text-sm",
+      idx === 0
+        ? "pl-4 md:pl-30 text-left font-medium"
+        : !isActions && "text-center",
+      idx === totalCols - 1 && "pr-4 md:pr-6",
+      isActions && "flex justify-center gap-2",
+    );
 
   return (
     <div className="container mx-auto py-4 md:py-8 space-y-4 md:space-y-6 px-4">
@@ -332,29 +349,18 @@ export const Flights = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="whitespace-nowrap">Voo</TableHead>
-                      <TableHead className="whitespace-nowrap">
-                        Origem
-                      </TableHead>
-                      <TableHead className="whitespace-nowrap">
-                        Destino
-                      </TableHead>
-                      <TableHead className="whitespace-nowrap">
-                        Partida
-                      </TableHead>
-                      <TableHead className="whitespace-nowrap">
-                        Chegada
-                      </TableHead>
+                      <TableHead className={getHead(0)}>Voo</TableHead>
+                      <TableHead className={getHead(1)}>Origem</TableHead>
+                      <TableHead className={getHead(2)}>Destino</TableHead>
+                      <TableHead className={getHead(3)}>Partida</TableHead>
+                      <TableHead className={getHead(4)}>Chegada</TableHead>
 
-                      {/* Só renderiza a coluna se o usuário estiver logado */}
                       {isAuthenticated && (
-                        <TableHead className="whitespace-nowrap">
-                          Criado por
-                        </TableHead>
+                        <TableHead className={getHead(5)}>Criado por</TableHead>
                       )}
 
                       {isOperator && (
-                        <TableHead className="text-right whitespace-nowrap">
+                        <TableHead className={getHead(isAuthenticated ? 6 : 5)}>
                           Ações
                         </TableHead>
                       )}
@@ -364,31 +370,28 @@ export const Flights = () => {
                   <TableBody>
                     {flights.map((f) => (
                       <TableRow key={f.flightId}>
-                        <TableCell className="font-medium whitespace-nowrap">
+                        <TableCell className={getCell(0)}>
                           {f.flightNumber}
                         </TableCell>
-
-                        <TableCell className="whitespace-nowrap">
+                        <TableCell className={getCell(1)}>
                           {f.departureAirport}
                         </TableCell>
-
-                        <TableCell className="whitespace-nowrap">
+                        <TableCell className={getCell(2)}>
                           {f.arrivalAirport}
                         </TableCell>
-
-                        <TableCell className="whitespace-nowrap text-xs md:text-sm">
+                        <TableCell className={getCell(3)}>
                           {new Date(f.departureTime).toLocaleString("pt-BR")}
                         </TableCell>
-
-                        <TableCell className="whitespace-nowrap text-xs md:text-sm">
+                        <TableCell className={getCell(4)}>
                           {new Date(f.arrivalTime).toLocaleString("pt-BR")}
                         </TableCell>
 
-                        {/* Só renderiza a célula se o usuário estiver logado */}
                         {isAuthenticated && (
-                          <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                          <TableCell
+                            className={cn(getCell(5), "text-muted-foreground")}
+                          >
                             {f.createdBy ? (
-                              <span className="flex items-center gap-1">
+                              <span className="inline-flex items-center justify-center gap-1">
                                 <User className="h-3 w-3" />
                                 {f.createdBy.username}
                               </span>
@@ -399,31 +402,30 @@ export const Flights = () => {
                         )}
 
                         {isOperator && (
-                          <TableCell className="text-right whitespace-nowrap">
-                            <div className="flex justify-end gap-2">
-                              {(isAdmin || f.createdBy?.id === user?.id) && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => openEditDialog(f)}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                              )}
-
-                              {isAdmin && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-destructive hover:text-destructive"
-                                  onClick={() =>
-                                    handleDelete(f.flightId, f.flightNumber)
-                                  }
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
+                          <TableCell
+                            className={getCell(isAuthenticated ? 6 : 5, true)}
+                          >
+                            {(isAdmin || f.createdBy?.id === user?.id) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditDialog(f)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() =>
+                                  handleDelete(f.flightId, f.flightNumber)
+                                }
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </TableCell>
                         )}
                       </TableRow>
